@@ -2,86 +2,98 @@
 
 # Fetal Health Classification
 
-This repository holds files to build an XGBoost model to determine the health status of a fetus based on cardiotocogram (CTG) results from the 
+This repository contains files that use tree-based models (Random Forest and XGBoost) to determine the health status of a fetus based on the results of cardiotocograms from the 
 ["Fetal Health Classification"](https://www.kaggle.com/datasets/andrewmvd/fetal-health-classification) Kaggle dataset.
 
 ## Overview
-
-* **Challenge:** Use features extracted from CTGs, such as uterine contractions and fetal heart rate, to determine whether a fetus is healthy, suspect, or pathological. 
-* **Approach:** An XGBoost model using sample weights and optimized hyperparameters.
-* **Summary:** The final XGBoost model achieved a macro-averaged F1-score of 0.912.
+* **Background:** A cardiotocogram (CTG) is a test that records things such as fetal heart rate and uterine contractions to assess the health of a fetus in utero. It's used to determine if a fetus is in distress and can assist in diagnosing things like hypoxia.
+* **Challenge:** The goal of this project is to train a machine learning model that can determine if a fetus is normal, suspect, or pathological based on measurements from CTGs. 
+* **Approach:** Several iterations of Random Forest and XGBoost models, combined with sampling techniques such as SMOTE (Synthetic Minority Oversampling Technique) and Random Oversampling, are evaluated on their performance on this multi-class classification problem.
+* **Summary:** The model that performed the best was an XGBoost model with optimized hyperparameters, achieving a macro-averaged F1-score of 0.912.
 
 ## Summary of Work Done
 
 ### Data
 
 * **Type:** Tabular
-* **Input:**
-  * `fetal_health.csv`: CTG features with the health status labels determined by an obstetrician.
+  * Input: A CSV file that contains CTG measurements such as fetal heart rate, uterine contractions, and fetal movement.
+  * Output: A health status label as determined by an obstetrician indicating whether a fetus is healthy, suspect (suspected to be in distress), or pathological (in distress/abnormal).
 * **Size:**
-  * 2,126 rows, 22 features, size: 228.72 kB
-* **Instances (Train, Validation, Test Split):** 1,700 training, 426 test
+  * 2,126 rows and 22 features, file size: 228.72 kB
+* **Instances:**
+  * Training: 1,700 instances
+  * Testing: 426 instances
+  * Validation: Performed using cross-validation in Grid Search
 
 #### Preprocessing / Clean Up
 
-* Converted `histogram_tendency` and `fetal_health` to categorical features to maintain consistency with documentation.
-* One-hot encoded `histogram_tendency`.
+* **Feature Types:** The features histogram_tendency and fetal_health were converted from numerical to categorical features because they represent the skew of a CTG histogram and fetal health classifications, respectively.
+* **Encoding:** The feature histogram_tendency was one-hot encoded into three separate features, each representing the skew of the histogram.
+* **Outliers:** Features such as histogram_number_of_zeros and fetal_movement had a significant number of outliers, but all outliers were retained to preserve any potential patterns that may correlate with the target class. 
 
 #### Data Visualization
 
-There is a significant class imbalance in the dataset: 77.8% Normal, 13.9% Suspect, and 8.3% Pathological.
+As noted in the notebooks, there is a significant class imbalance in the dataset:
+* 77.8% Normal
+* 13.9% Suspect
+* 8.3% Pathological
+
+The main focus of the data visualizations is to identify features that effectively separate the minority classes from the majority class.
 
 ![image](https://github.com/user-attachments/assets/2e9cf5a2-52bd-410c-8e9a-2d50a3b0c0e3)
+![image](https://github.com/user-attachments/assets/36408af2-8bf7-4996-b237-ee18eb67721b)
+
+Histogram_tendency represents the skewness of the fetal heart rate distribution during the CTG, while histogram_number_of_zeros shows the number of zero count bins in the histogram. The table shows that a left skew (-1.0) is more common in pathological cases: 27% of pathological cases have a left skew compared to less than 6% of normal or suspect cases. The graph shows that the majority of pathological class has no empty bins in their CTG histograms. 
+
 ![image](https://github.com/user-attachments/assets/a7d1a6c3-dbcd-4551-a3f1-9bce11d5a401)
+![image](https://github.com/user-attachments/assets/77e22437-3dd9-44a8-9156-3045c615f54f)
 
-Features such as the ones above peformed well at separating the minority classes. Almost all features contributed to some extent in class separation.
+Histogram_variance captures the variance of the fetal heart rate distribution during the CTG, while histogram_number_of_peaks indicates the number of distinct peaks. The data shows that almost all instances in the suspect class cluster near zero in histogram_variance. A large portion of the suspect class falls within the 0–5 range in histogram_number_of_peaks.
 
-### Problem Formulation
-
-* **Define:**
-  * **Input:** `fetal_health.csv`
-  * **Output:** `df_encoded.csv` and classification model
-  * **Model:**
-    * XGBoost: robust to outliers, no scaling needed, handles class imbalances well, and strong multi-class classification performance.
-    * Tuned Hyperparameters: `objective='multi:softmax'`, `random_state=42`, `gamma=0.1`, `learning_rate=0.2`, `max_delta_step=1`, `max_depth=7`, `n_estimators=100`
+#### Problem Formulation
+  * **Input:** `fetal_health.csv`, 22 features
+  * **Output:** 1 = Normal, 2 = Suspect, 3 = Pathological
+  * **Models:**
+    * Random Forest: Serves as a baseline and is easily interpretable.  
+    * XGBoost: Performs better than Random Forest, handles class imbalances and outliers well.
+  * **Hyperparameters:**
+     * Most of the models used default hyperparameters when being trained, except for class_weight='balanced' on Random Forest and sample_weight=sample_weights on XGBoost when SMOTE or Random Oversampling weren't being used. In addition, all XGBoost models had the hyperparameter objective='multi:softmax' set for multi-class classification. The optimized hyperparameters for the best performing XGBoost model were:
+       * objective='multi:softmax', sample_weight=sample_weights, random_state=42, gamma=0.1, learning_rate=0.2, max_delta_step=1, max_depth=7, n_estimators=100
 
 ### Training
-Although the original baseline model was a random forest, I ultimately chose an XGBoost model as the final model due to its better performance.  The training steps below describe the final XGBoost model workflow:
 
-* Loaded the processed CSV file created by **EDA and Preprocessing**.
-* Label-encoded the `fetal_health` column to be 0, 1, 2.
-* Split the data into training and test sets.
-* Calculated the sample weights for each class and incorporated them into the baseline model.
-* Performed hyperparameter tuning using GridSearch.
-* Create a new XGBoost model with optimized hyperparameters and evaluated it on the test set.
+After the initial baseline model, the target column was label encoded for the XGBoost models. Multiple XGBoost models were trained using default hyperparameters, SMOTE, or Random Oversampling and then compared using macro-averaged F1-score and confusion matrices. Grid Search was then used on the best performing model. The main issue during training was that the suspect class had noticeably lower F1-scores and the confusion matrices showed that it was mislabeling instances more often than the other two classes. This is likely due to the fact that the suspect class often overlapped with the other classes in the data and there were very few features that effectively separated it from the other two. 
 
 ### Performance Comparison
 
 ![image](https://github.com/user-attachments/assets/83d1ff5a-2b23-4a6a-89e4-66347a0698b5)
+
+One of the main metrics I used to evaluate the models was macro-averaged F1-score. It gives equal weight to each class, preventing the normal class from skewing the score and giving the false impression of better model performance. As seen in the table, the sampling techniques had little effect on model performance. The best performing model didn't use any sampling techniques and only had hyperparameter tuning applied.
+
 ![image](https://github.com/user-attachments/assets/5c4148fa-0d05-4245-be8c-e79ab1623428)
 
-The macro-averaged F1-score is calculated by averaging the F1-score of each class. This metric was chosen because it gives equal weight to all classes, preventing the majority class from having too much influence on the final evaluation score.
+The other main metric I used was a confusion matrix to see a visual representation of how each model classified each case. The confusion matrix above is the one for the optimized XGBoost model and shows that the model is correctly classifying each instance in the test set most of the time, except for a slightly worse performance in the suspect class. 
 
 ### Conclusions
 
-* XGBoost performs well on tabular data.
+An XGBoost model with optimized hyperparameters was the most effective at determining fetal health status. 
 
 ### Future Work
 
-* Try undersampling the majority class instead of oversampling the minority ones.
-* Perform PCA.
-* Try other models like neural networks.
+* **Different Sampling Techniques:** Explore other sampling methods when trying to address the class imbalance. Try to undersample the majority class as opposed to oversampling the minority ones or combine several of these methods together. 
+* **Feature Engineering:** The models still struggled at separating the suspect class from the others due to the data for it often overlapping with them. Creating new features that highly correlate with the suspect class or removing existing features based on multicollinearity could help boost the metrics of the class. 
+* **Outliers:** Although I chose to leave outliers alone, imputing outliers with other values such as the mean, median, mode of a column could give a better performance. However, I'd be cautious doing this since the data comes from a real life study and it can introduce unnecessary noise to the dataset. 
 
 ## How to Reproduce Results
 
-Running all cells in **EDA and Preprocessing** will produce a processed CSV file. Running all cells in **Training and Evaluations** will generate the final model.
+After downloading the CSV file, run the EDA and Preprocessing notebook to produce a preprocessed CSV file to use for training. Then, running the Training and Evaluations notebook will train all of the models and display the evaluations for each. 
 
 ### Overview of Files in Repository
 
-* `EDA and Preprocessing.ipynb`: Performs feature visualizations and outputs a clean CSV file.
-* `Training and Evaluations.ipynb`: Trains and evaluates the models. Contains the evaluations for each. 
-* `fetal_health.csv`: The original dataset as provided by kaggle.
-
+* EDA and Preprocessing.ipynb: Contains data visualizations and summary info about the dataset. Produces a cleaned CSV file for training when run.
+* Training and Evaluations.ipynb: Trains and evaluates several models using the cleaned dataset from the first notebook. 
+* fetal_health.csv: The original dataset as provided by Kaggle.
+  
 ### Required Libraries
 
 * pandas
@@ -95,7 +107,7 @@ Running all cells in **EDA and Preprocessing** will produce a processed CSV file
 
 #### Performance Evaluation
 
-Evaluation functions generate classification reports and confusion matrices for each model in the **Training and Evaluations** notebook. The performance comparison table above is at the end of this notebook.
+Evaluation functions generate classification reports and confusion matrices for each model in the Training and Evaluations notebook. The table comparing the F1-scores of each model is also at the end of this notebook.
 
 #### Citations
 SisPorto 2.0: a program for automated analysis of cardiotocograms [(DOI: 10.48550/arXiv.2207.08815)](https://arxiv.org/abs/2207.08815)
