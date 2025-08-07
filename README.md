@@ -2,14 +2,11 @@
 
 # Fetal Health Classification
 
-This repository contains files that use tree-based models (Random Forest and XGBoost) to determine the health status of a fetus based on the results of cardiotocograms from the 
+This repository contains files that attempt to use tree-based models to determine the health status of a fetus based on the results of cardiotocograms from the 
 ["Fetal Health Classification"](https://www.kaggle.com/datasets/andrewmvd/fetal-health-classification) Kaggle dataset.
 
 ## Overview
-* **Background:** A cardiotocogram (CTG) is a test that records things such as fetal heart rate and uterine contractions to assess the health of a fetus in utero. It's used to determine if a fetus is in distress and can assist in diagnosing things like hypoxia.
-* **Challenge:** The goal of this project is to train a machine learning model that can determine if a fetus is normal, suspect, or pathological based on measurements from CTGs. 
-* **Approach:** Several iterations of Random Forest and XGBoost models, combined with sampling techniques such as SMOTE (Synthetic Minority Oversampling Technique) and Random Oversampling, are evaluated on their performance on this multi-class classification problem.
-* **Summary:** The model that performed the best was an XGBoost model with optimized hyperparameters, achieving a macro-averaged F1-score of 0.912.
+Maternal and child mortality are key indicators of societal development, with most of these deaths occurring in low-income environments. A cardiotocogram (CTG) is a test that records vital signs such as fetal heart rate and uterine contractions to assess the health of a fetus in utero. It is inexpensive and can be used to detect early signs of fetal distress, allowing for rapid intervention and the prevention of child and/or maternal death. The goal of this project is to train a machine learning model to determine whether a fetus is normal, suspect (suspected of being in distress), or pathological (in distress) based on measurements from CTGs. Several iterations of Random Forest and XGBoost models, combined with sampling techniques such as SMOTE (Synthetic Minority Oversampling Technique) and random oversampling, are evaluated for their multi-class classification performance. An XGBoost with optimized hyperparameters performed the best with a macro-averaged F1-score of 0.912.
 
 ## Summary of Work Done
 
@@ -17,7 +14,7 @@ This repository contains files that use tree-based models (Random Forest and XGB
 
 * **Type:** Tabular
   * Input: A CSV file that contains CTG measurements such as fetal heart rate, uterine contractions, and fetal movement.
-  * Output: A health status label as determined by an obstetrician indicating whether a fetus is healthy, suspect (suspected to be in distress), or pathological (in distress/abnormal).
+  * Output: A health status label as determined by an obstetrician indicating whether a fetus is healthy, suspect, or pathological.
 * **Size:**
   * 2,126 rows and 22 features, file size: 228.72 kB
 * **Instances:**
@@ -62,7 +59,7 @@ Histogram_variance captures the variance of the fetal heart rate distribution du
 
 ### Training
 
-After the initial baseline model, the target column was label encoded for the XGBoost models. Multiple XGBoost models were trained using default hyperparameters, SMOTE, or Random Oversampling and then compared using macro-averaged F1-score and confusion matrices. Grid Search was then used on the best performing model. The main issue during training was that the suspect class had noticeably lower F1-scores and the confusion matrices showed that it was mislabeling instances more often than the other two classes. This is likely due to the fact that the suspect class often overlapped with the other classes in the data and there were very few features that effectively separated it from the other two. 
+After the initial baseline model, the target column was label encoded for the XGBoost models. Multiple XGBoost models were trained using default hyperparameters, SMOTE, or Random Oversampling and then compared using macro-averaged F1-score and confusion matrices. Grid Search was then used on the best performing model. The main issue during training was that the suspect class had noticeably lower F1-scores and the confusion matrices showed that it was mislabeling instances more often than the other two classes. This is likely due to the suspect class often overlapping with the other classes in the data, resulting in poor separation between the classes.
 
 ### Performance Comparison
 
@@ -82,7 +79,8 @@ An XGBoost model with optimized hyperparameters was the most effective at determ
 
 * **Different Sampling Techniques:** Explore other sampling methods when trying to address the class imbalance. Try to undersample the majority class as opposed to oversampling the minority ones or combine several of these methods together. 
 * **Feature Engineering:** The models still struggled at separating the suspect class from the others due to the data for it often overlapping with them. Creating new features that highly correlate with the suspect class or removing existing features based on multicollinearity could help boost the metrics of the class. 
-* **Outliers:** Although I chose to leave outliers alone, imputing outliers with other values such as the mean, median, mode of a column could give a better performance. However, I'd be cautious doing this since the data comes from a real life study and it can introduce unnecessary noise to the dataset. 
+* **Outliers:** Although I chose to leave outliers alone, imputing outliers with other values such as the mean, median, mode of a column could give a better performance. However, I'd be cautious doing this since the data comes from a real life study and it can introduce unnecessary noise to the dataset.
+* **Normalization:** Even though tree-based models were used, normalizing the data could still improve performance by highlighting existing outliers in the dataset.
 
 ## How to Reproduce Results
 
